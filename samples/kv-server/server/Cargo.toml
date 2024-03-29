@@ -1,0 +1,23 @@
+[package]
+name = "kv-server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+kv-core = { path = "../core" }
+tracing = "^0"
+uuid = { version = "^1", features = ["v4"] }
+anyhow = "^1"
+tracing-subscriber = "^0"
+tokio = { version = "^1", features = ["rt", "rt-multi-thread", "io-util", "macros", "net" ] }
+
+
+[dev-dependencies]
+
+
+
