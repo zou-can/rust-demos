@@ -1,0 +1,19 @@
+[workspace]
+members = [
+    "core",
+    "server",
+    "client",
+]
+exclude = ["docs"]
+
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["zoucan <zoucan66@gmail.com>"]
+description = "A short description of my package"
+documentation = "https://example.com/bar"
+
+
+
