@@ -63,6 +63,22 @@ impl ExecutableCommand for Set {
 
 impl ExecutableCommand for Mset {
     fn execute(self, storage: &impl Storage) -> CommandResponse {
+        // 参数校验
+        for entry in &self.entries {
+            if let Entry {
+                value: Some(
+                    Value {
+                        val: Some(Val::String(_))
+                    }
+                ), ..
+            } = entry {
+                continue;
+            }
+
+            // 参数格式不符
+            return CommandResponse::from(KvError::InvalidCommand)
+        }
+
         CommandResponse::from(storage.mset(self.entries))
     }
 }

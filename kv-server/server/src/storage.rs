@@ -1,3 +1,5 @@
+mod memory;
+
 use kv_core::command::{Entry, Value};
 use kv_core::error::KvError;
 
