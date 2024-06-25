@@ -15,7 +15,6 @@ impl Chat for ChatService {
         &self,
         request: Request<ChatRequest>,
     ) -> Result<Response<ChatResponse>, Status> {
-        println!("Received a request: {:#?}", request);
 
         let resp = ChatResponse {
             message: format!("Received: {}", request.into_inner().message)
@@ -30,7 +29,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "127.0.0.1:16443".parse()?;
 
     // ChatServer 是 tonic 生成的样板代码
-    let svc = ChatServer::new(ChatService::default());
+    // 配置拦截器
+    let svc = ChatServer::with_interceptor(
+        ChatService::default(),
+        intercept,
+    );
 
     Server::builder()
         .add_service(svc)
@@ -38,4 +41,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     Ok(())
+}
+
+/// 使用 FnMut trait 定义拦截器
+fn intercept(req: Request<()>) -> Result<Request<()>, Status> {
+    // 得到 metadata 中的 trace-id
+    if let Some(v) = req.metadata().get("trace-id") {
+        if let Ok(s) = v.to_str() {
+            println!("{s} - {:?}", req);
+        }
+    }
+
+    Ok(req)
 }
