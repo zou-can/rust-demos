@@ -1,0 +1,23 @@
+[package]
+name = "grpc"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "chat-server"
+path = "src/server.rs"
+
+[[bin]]
+name = "chat-client"
+path = "src/client.rs"
+
+[dependencies]
+tonic = "0.11"
+prost = "0.12"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+uuid = { version = "1", features = ["v4"] }
+
+[build-dependencies]
+tonic-build = "0.11"
