@@ -15,7 +15,6 @@ impl Chat for ChatService {
         &self,
         request: Request<ChatRequest>,
     ) -> Result<Response<ChatResponse>, Status> {
-
         let resp = ChatResponse {
             message: format!("Received: {}", request.into_inner().message)
         };
@@ -26,19 +25,35 @@ impl Chat for ChatService {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "127.0.0.1:16443".parse()?;
+    let addrs = ["127.0.0.1:16443", "127.0.0.1:16444"];
 
-    // ChatServer 是 tonic 生成的样板代码
-    // 配置拦截器
-    let svc = ChatServer::with_interceptor(
-        ChatService::default(),
-        intercept,
-    );
+    let handles = addrs.into_iter()
+        .map(|addr| {
+            let addr = addr.parse().unwrap();
 
-    Server::builder()
-        .add_service(svc)
-        .serve(addr)
-        .await?;
+            // ChatServer 是 tonic 生成的样板代码
+            // 配置拦截器
+            let svc = ChatServer::with_interceptor(
+                ChatService::default(),
+                intercept,
+            );
+
+            let server = Server::builder()
+                .add_service(svc)
+                .serve(addr);
+
+            // 分别启动两个 server
+            tokio::spawn(async move {
+                if let Err(e) = server.await {
+                    eprintln!("Error = {:?}", e);
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+
+    for handle in handles {
+        handle.await?;
+    }
 
     Ok(())
 }

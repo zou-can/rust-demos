@@ -26,22 +26,27 @@ impl Interceptor for TraceInterceptor {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let channel = Endpoint::from_static("http://127.0.0.1:16443")
-        .connect()
-        .await?;
+    let endpoints = ["http://127.0.0.1:16444", "http://127.0.0.1:16443", ]
+        .into_iter()
+        .map(|addr| Endpoint::from_static(addr));
+
+    // 客户端负载均衡
+    let channel = Channel::balance_list(endpoints);
 
     let mut client: ChatClient<InterceptedService<Channel, TraceInterceptor>> =
         // ChatClient 是 tonic 生成的样板代码
         // 配置拦截器
         ChatClient::with_interceptor(channel, TraceInterceptor::default());
 
-    let request = Request::new(ChatRequest {
-        message: "Hello?".into(),
-    });
+    for _ in 0..10 {
+        let request = Request::new(ChatRequest {
+            message: "Hello?".into(),
+        });
 
-    let response = client.unary_chat(request).await?;
+        let response = client.unary_chat(request).await?;
 
-    println!("{:#?}", response);
+        println!("{:#?}", response);
+    }
 
     Ok(())
 }
