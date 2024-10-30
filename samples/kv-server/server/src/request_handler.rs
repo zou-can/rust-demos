@@ -3,7 +3,7 @@ use kv_core::domain::{Request, Response, KV};
 
 use crate::storage::Storage;
 
-/// main process for commands
+/// process request
 pub fn handle(request: Request, storage: &impl Storage) -> Response {
     let res = match request {
         Get { key } => storage.get(&key),
@@ -15,3 +15,5 @@ pub fn handle(request: Request, storage: &impl Storage) -> Response {
 
     Response::from(res)
 }
+
+

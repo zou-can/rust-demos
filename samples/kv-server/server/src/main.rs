@@ -1,14 +1,18 @@
+use std::net::SocketAddr;
 use crate::storage::memory::Memory;
 use crate::storage::Storage;
 use std::sync::Arc;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, trace};
 use uuid::Uuid;
 use anyhow::Result;
+use bytes::{Buf, BufMut, BytesMut};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use kv_core::domain::{Request, Response};
 
-mod command_handler;
+mod request_handler;
 mod storage;
+mod serializer;
 
 /// 实际的 Server 类
 struct Server<Store> {
@@ -31,13 +35,46 @@ impl<Store: Storage> SharedServer<Store> {
         }
     }
 
-    fn handle(&self, request: Request) -> Response {
+    async fn handle_connection(&self, mut socket: TcpStream, addr: SocketAddr) {
+        let (mut reader, mut writer) = socket.split();
+        let mut buf = BytesMut::with_capacity(1024);
+
+        loop {
+            match reader.read_buf(&mut buf).await {
+                Ok(0) => {
+                    trace!("Read data from {addr} finished.");
+                    break;
+                }
+                Ok(n) => {
+                    trace!("Read data from {addr}, data size = {n}.");
+
+                    // TODO 序列化数据
+
+                    match writer.write_all_buf(&mut buf).await {
+                        Ok(_) => trace!("Write data to {addr} finished."),
+                        Err(e) => error!("Write data to {addr} failed: {e:?}"),
+                    }
+                }
+                Err(e) => {
+                    error!("Read data from {addr} failed: {e:?}");
+                    break;
+                }
+            }
+        }
+
+
+        trace!("Client {:?} disconnected.", addr);
+    }
+
+    fn handle_request(&self, request: Request) -> Response {
+        // 序列化
+
         let req_id = Uuid::new_v4();
 
         debug!("{req_id} - request = {:?}", request);
 
         // TODO: 发送 on_received 事件
-        let response = command_handler::handle(request, &self.shared.storage);
+        let response = request_handler::handle(request, &self.shared.storage);
 
         debug!("{req_id} - response = {:?}", response);
 
@@ -58,23 +95,24 @@ impl<Storage> Clone for SharedServer<Storage> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::TRACE)
+        .init();
 
     let server = SharedServer::new(Memory::new());
 
-    let addr = "127.0.0.1:12345";
+    let addr = "127.0.0.1:6736";
     let listener = TcpListener::bind(addr).await?;
     info!("Listening on: {addr}");
 
     loop {
-        let (stream, addr) = listener.accept().await?;
-        info!("Client {:?} connected", addr);
+        let (socket, addr) = listener.accept().await?;
+        trace!("Client {:?} connected.", addr);
 
         let svr = server.clone();
+
         tokio::spawn(async move {
-            // 封装数据流，用于处理 ProtoBuf 报文
-            // todo 接收并处理数据
-            info!("Client {:?} disconnected", addr);
+            svr.handle_connection(socket, addr).await;
         });
     }
 }

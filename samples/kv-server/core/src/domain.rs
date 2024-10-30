@@ -1,6 +1,7 @@
+use serde::Deserialize;
 use crate::error::KvError;
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub enum Request {
     Get { key: String },
     MGet { keys: Vec<String> },
@@ -9,14 +10,14 @@ pub enum Request {
     Del { keys: Vec<String> },
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Deserialize)]
 pub struct Response {
     pub code: u32,
     pub message: String,
     pub values: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct KV {
     pub key: String,
     pub value: String,
